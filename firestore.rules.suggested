@@ -1,0 +1,136 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(uid())).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userDoc().role == 'admin';
+    }
+
+    function isModerator() {
+      return isSignedIn() && userDoc().role in ['moderator', 'admin'];
+    }
+
+    function roleUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && userId == uid()
+        && request.resource.data.role == 'user';
+      allow update: if isSignedIn() && userId == uid() && roleUnchanged()
+        || isAdmin();
+      allow delete: if false;
+    }
+
+    match /volunteer_applications/{appId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.userId == uid();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /accessible_places/{placeId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn()
+        && resource.data.createdBy == uid();
+    }
+
+    match /accessible_places/{placeId}/reviews/{reviewId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn()
+        && resource.data.userId == uid();
+    }
+
+    match /community_rooms/{roomId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if isModerator();
+    }
+
+    match /community_posts/{postId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if isSignedIn()
+        && resource.data.authorId == uid()
+        || isModerator();
+    }
+
+    match /sos_requests/{requestId} {
+      allow read: if isSignedIn() && (resource.data.userId == uid() || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == uid();
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == uid());
+    }
+
+    match /success_stories/{id} {
+      allow read, create: if isSignedIn();
+    }
+
+    match /notifications/{id} {
+      allow read, write: if isSignedIn()
+        && resource.data.userId == uid();
+    }
+
+    // ── Rehberler ──────────────────────────────────────────────────────────
+    match /guides/{guideId} {
+      // Onaylı rehberleri herkes okuyabilir; onaylanmamışları sadece moderatör/admin
+      allow read: if isSignedIn() &&
+        (resource.data.isApproved == true || isModerator());
+      // Gönüllü veya üzeri oluşturabilir; author kendi yazısını oluşturur
+      allow create: if isSignedIn()
+        && request.resource.data.authorId == uid()
+        && request.resource.data.isApproved == false;
+      // Sadece moderatör/admin onaylayabilir veya düzenleyebilir
+      allow update: if isModerator();
+      // Sadece moderatör/admin silebilir (reddetme)
+      allow delete: if isModerator();
+    }
+
+    // ── Bağış Kampanyaları ─────────────────────────────────────────────────
+    match /campaigns/{campaignId} {
+      // Aktif/tamamlanmış herkese açık; pending/rejected sadece moderatör
+      allow read: if isSignedIn() &&
+        (resource.data.status in ['active', 'completed'] || isModerator());
+      // Giriş yapan herkes oluşturabilir (pending olarak)
+      allow create: if isSignedIn()
+        && request.resource.data.creatorId == uid()
+        && request.resource.data.status == 'pending';
+      // Moderatör onaylayıp güncelleyebilir; collectedAmount atomik artışa izin ver
+      allow update: if isModerator()
+        || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['collectedAmount']));
+      allow delete: if false;
+    }
+
+    // ── Bağışlar ───────────────────────────────────────────────────────────
+    match /donations/{donationId} {
+      allow read: if isSignedIn() &&
+        (resource.data.userId == uid() || isModerator());
+      allow create: if isSignedIn()
+        && request.resource.data.userId == uid();
+      allow update, delete: if false;
+    }
+
+    // ── Sponsorlar ─────────────────────────────────────────────────────────
+    match /sponsors/{sponsorId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
+
+// Production note: enforce admin/moderator via Firebase Custom Claims
+// instead of client-writable Firestore `role` fields.

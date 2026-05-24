@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "618318744581",
+    "project_id": "yanyana-2026-575cf",
+    "storage_bucket": "yanyana-2026-575cf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:618318744581:android:9573a2f7a7991c0797a06c",
+        "android_client_info": {
+          "package_name": "com.example.yanyana_p"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "618318744581-b9vnagcrp37ahpdgqc7r0o5nrjm5g3fm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQJ_U6pYiWS0WWMcOTWv8scD3FLlblvbI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "618318744581-b9vnagcrp37ahpdgqc7r0o5nrjm5g3fm.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "618318744581-0nbctiloerp5ndc3g49p17h65eoa18c3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.yanyanap"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
