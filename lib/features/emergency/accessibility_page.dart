@@ -411,9 +411,9 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
                     Divider(height: 18, color: YanYanaColors.divider),
                     _FeatureTile(
                       icon: Icons.notifications_active_rounded,
-                      title: 'Push Notification Prototype',
-                      desc: 'Bildirim gönderimini demo olarak simüle eder.',
-                      badge: 'Prototype',
+                    title: 'Push Notification Sistemi',
+desc: 'Local notification ve uygulama içi bildirim desteği sağlar.',
+badge: 'MVP',
                     ),
                   ],
                 ),
@@ -528,7 +528,7 @@ class _FeatureTile extends StatelessWidget {
       page = const LiveCaptionPage();
     } else if (title == 'Titreşimli Geri Bildirim') {
       page = const ShakeHelpPage();
-    } else if (title == 'Push Notification Prototype') {
+    } else if (title == 'Push Notification Sistemi') {
       page = const PushNotificationPage();
     }
 

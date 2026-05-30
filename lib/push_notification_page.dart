@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:yanyana_p/core/services/backend_orchestrator.dart';
 import 'package:yanyana_p/core/theme/theme.dart';
 
 class PushNotificationPage extends StatefulWidget {
@@ -11,6 +13,10 @@ class PushNotificationPage extends StatefulWidget {
 class _PushNotificationPageState extends State<PushNotificationPage> {
   String selectedType = "Acil Destek";
   bool permissionEnabled = false;
+  bool isSending = false;
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   final List<String> notificationTypes = [
     "Acil Destek",
@@ -19,12 +25,125 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
     "Erişilebilirlik Hatırlatması",
   ];
 
-  void sendDemoNotification() {
+  @override
+  void initState() {
+    super.initState();
+    _initializeNotifications();
+  }
+
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
+    const InitializationSettings settings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(settings);
+  }
+
+  Future<void> _requestPermission() async {
+    final iosPlugin =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+
+    await iosPlugin?.requestPermissions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      permissionEnabled = true;
+    });
+
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("$selectedType bildirimi gönderildi."),
+      const SnackBar(
+        content: Text("Bildirim izni etkinleştirildi."),
       ),
     );
+  }
+
+  Future<void> sendDemoNotification() async {
+    if (isSending) return;
+
+    setState(() {
+      isSending = true;
+    });
+
+    try {
+      if (!permissionEnabled) {
+        await _requestPermission();
+      }
+
+      final message = '$selectedType bildirimi başarıyla gönderildi.';
+
+      const AndroidNotificationDetails androidDetails =
+          AndroidNotificationDetails(
+        'yanyana_channel',
+        'YanYana Notifications',
+        channelDescription: 'YanYana local notification channel',
+        importance: Importance.max,
+        priority: Priority.high,
+      );
+
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const NotificationDetails details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await flutterLocalNotificationsPlugin.show(
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        selectedType,
+        message,
+        details,
+      );
+
+      await BackendOrchestrator.instance.notificationService.addForCurrentUser(
+        title: selectedType,
+        message: message,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("$selectedType bildirimi gönderildi."),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString().replaceFirst('Bad state: ', ''),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSending = false;
+        });
+      }
+    }
   }
 
   @override
@@ -54,9 +173,7 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
               ),
             ),
           ),
-
           const SizedBox(height: 25),
-
           const Text(
             "Push Notification",
             textAlign: TextAlign.center,
@@ -66,9 +183,7 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
               fontWeight: FontWeight.w900,
             ),
           ),
-
           const SizedBox(height: 12),
-
           const Text(
             "Kullanıcıya acil destek, güvenlik ve topluluk bildirimleri göndermek için tasarlanmıştır.",
             textAlign: TextAlign.center,
@@ -77,9 +192,7 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
               fontSize: 15,
             ),
           ),
-
           const SizedBox(height: 30),
-
           Container(
             decoration: BoxDecoration(
               color: YanYanaColors.surface,
@@ -94,19 +207,21 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
               subtitle: const Text(
-                "Gerçek Firebase bağlantısında kullanıcıdan izin istenir.",
+                "Local notification ve uygulama içi bildirim kaydı için izin alınır.",
               ),
               secondary: const Icon(Icons.notifications_rounded),
-              onChanged: (value) {
-                setState(() {
-                  permissionEnabled = value;
-                });
+              onChanged: (value) async {
+                if (value) {
+                  await _requestPermission();
+                } else {
+                  setState(() {
+                    permissionEnabled = false;
+                  });
+                }
               },
             ),
           ),
-
           const SizedBox(height: 14),
-
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -146,9 +261,7 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
               },
             ),
           ),
-
           const SizedBox(height: 25),
-
           SizedBox(
             width: double.infinity,
             height: 55,
@@ -158,13 +271,17 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
                 borderRadius: BorderRadius.circular(18),
               ),
               child: ElevatedButton.icon(
-                onPressed: sendDemoNotification,
-                icon: const Icon(Icons.send_rounded),
-                label: const Text("Bildirim Gönder"),
+                onPressed: isSending ? null : sendDemoNotification,
+                icon: Icon(
+                  isSending ? Icons.hourglass_top_rounded : Icons.send_rounded,
+                ),
+                label: Text(isSending ? "Gönderiliyor..." : "Bildirim Gönder"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
+                  disabledBackgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   foregroundColor: Colors.white,
+                  disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                   ),
@@ -172,9 +289,7 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -184,7 +299,7 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
               boxShadow: YanYanaShadows.card,
             ),
             child: const Text(
-              "Not: Gerçek push notification için Firebase Cloud Messaging bağlantısı gerekir.",
+              "Bildirim gönderildiğinde hem local notification tetiklenir hem de uygulama içi Bildirimler sayfasına kayıt eklenir.",
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: YanYanaColors.textMuted,
