@@ -251,7 +251,8 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
                     ScaffoldMessenger.of(this.context).showSnackBar(
                       SnackBar(
                         content: Text(
-'${selectedContact.name} için güvenli arama başlatıldı.',                        ),
+                          '${selectedContact.name} için güvenli arama başlatıldı.',
+                        ),
                       ),
                     );
                   });
@@ -383,15 +384,14 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
                     _FeatureTile(
                       icon: Icons.menu_book_rounded,
                       title: 'Sesli Betimlemeli Okuma',
-                      desc: 'Metni sesli okuma özelliği.',
-                      badge: 'Prototype',
+                      desc: 'Görsel veya belge içeriğini metne dönüştürüp sesli okur.',
+                      badge: 'MVP',
                     ),
                     Divider(height: 18, color: YanYanaColors.divider),
                     _FeatureTile(
                       icon: Icons.mic_rounded,
                       title: 'Sesli Komut Sistemi',
-                      desc:
-                          'Kullanıcı komutlarını algılayan sesli kontrol sistemi.',
+                      desc: 'Kullanıcı komutlarını algılayan sesli kontrol sistemi.',
                       badge: 'MVP',
                     ),
                     Divider(height: 18, color: YanYanaColors.divider),
@@ -399,7 +399,7 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
                       icon: Icons.closed_caption_rounded,
                       title: 'Canlı Altyazı Desteği',
                       desc: 'Konuşmaları gerçek zamanlı altyazıya dönüştürür.',
-                      badge: 'Prototype',
+                      badge: 'MVP',
                     ),
                     Divider(height: 18, color: YanYanaColors.divider),
                     _FeatureTile(
