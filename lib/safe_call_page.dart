@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:yanyana_p/core/services/backend_orchestrator.dart';
 import 'package:yanyana_p/core/theme/theme.dart';
+import 'package:yanyana_p/features/home/trusted_contacts_page.dart';
 
 class SafeCallPage extends StatefulWidget {
   const SafeCallPage({super.key});
@@ -9,37 +11,116 @@ class SafeCallPage extends StatefulWidget {
 }
 
 class _SafeCallPageState extends State<SafeCallPage> {
-  String selectedContact = "Anne";
-  String selectedNumber = "0555 111 22 33";
+  final _orchestrator = BackendOrchestrator.instance;
 
   bool isCalling = false;
+  bool isLoading = true;
+
   String statusText = "Güvenli arama sistemi beklemede.";
 
-  final List<Map<String, String>> emergencyContacts = [
-    {"name": "Anne", "number": "0555 111 22 33"},
-    {"name": "Baba", "number": "0555 444 55 66"},
-    {"name": "Yakın Arkadaş", "number": "0555 777 88 99"},
-  ];
+  List<dynamic> trustedContacts = [];
+  int selectedIndex = 0;
 
-  void selectContact(String name, String number) {
+  @override
+  void initState() {
+    super.initState();
+    _loadTrustedContacts();
+  }
+
+  Future<void> _loadTrustedContacts() async {
+    try {
+      final contacts = await _orchestrator.getTrustedContacts();
+
+      if (!mounted) return;
+
+      setState(() {
+        trustedContacts = contacts;
+        selectedIndex = 0;
+        isLoading = false;
+        statusText = contacts.isEmpty
+            ? "Güvenli arama için önce güvenilir kişi eklemelisin."
+            : "Güvenli arama sistemi beklemede.";
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+        statusText = "Güvenilir kişiler yüklenemedi.";
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Bad state: ', '')),
+        ),
+      );
+    }
+  }
+
+  Future<void> _goToTrustedContacts() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => const TrustedContactsPage(),
+      ),
+    );
+
+    if (!mounted) return;
+
     setState(() {
-      selectedContact = name;
-      selectedNumber = number;
-      statusText = "$selectedContact kişisi seçildi.";
+      isLoading = true;
+    });
+
+    await _loadTrustedContacts();
+  }
+
+  void selectContact(int index) {
+    setState(() {
+      selectedIndex = index;
+      statusText = "${trustedContacts[index].name} kişisi seçildi.";
     });
   }
 
-  void startSafeCall() {
+  Future<void> startSafeCall() async {
+    if (trustedContacts.isEmpty) {
+      await _goToTrustedContacts();
+      return;
+    }
+
+    final selectedContact = trustedContacts[selectedIndex];
+
     setState(() {
       isCalling = true;
-      statusText = "$selectedContact ile güvenli arama bağlantısı başlatılıyor.";
+      statusText =
+          "${selectedContact.name} ile güvenli arama bağlantısı başlatılıyor.";
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("$selectedContact aranıyor: $selectedNumber"),
-      ),
-    );
+    try {
+      await _orchestrator.startSafeCall(
+        trustedContactId: selectedContact.id,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("${selectedContact.name} için güvenli arama başlatıldı."),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isCalling = false;
+        statusText = "Güvenli arama başlatılamadı.";
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Bad state: ', '')),
+        ),
+      );
+    }
   }
 
   void stopSafeCall() {
@@ -56,19 +137,32 @@ class _SafeCallPageState extends State<SafeCallPage> {
   }
 
   void sendEmergencyAlert() {
+    if (trustedContacts.isEmpty) {
+      _goToTrustedContacts();
+      return;
+    }
+
+    final selectedContact = trustedContacts[selectedIndex];
+
     setState(() {
-      statusText = "$selectedContact kişisine acil destek bildirimi gönderildi.";
+      statusText =
+          "${selectedContact.name} kişisine acil destek bildirimi gönderildi.";
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("$selectedContact kişisine acil destek bildirimi gönderildi."),
+        content: Text(
+          "${selectedContact.name} kişisine acil destek bildirimi gönderildi.",
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final selectedContact =
+        trustedContacts.isNotEmpty ? trustedContacts[selectedIndex] : null;
+
     return Scaffold(
       backgroundColor: YanYanaColors.background,
       appBar: AppBar(
@@ -133,7 +227,7 @@ class _SafeCallPageState extends State<SafeCallPage> {
           const SizedBox(height: 30),
 
           const Text(
-            "Acil Kişiler",
+            "Güvenilir Kişiler",
             style: TextStyle(
               color: YanYanaColors.textDark,
               fontSize: 18,
@@ -143,52 +237,98 @@ class _SafeCallPageState extends State<SafeCallPage> {
 
           const SizedBox(height: 10),
 
-          ...emergencyContacts.map((contact) {
-            final bool isSelected = contact["name"] == selectedContact;
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
+          if (isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (trustedContacts.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: YanYanaColors.surface,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(22),
                 boxShadow: YanYanaShadows.card,
-                border: Border.all(
-                  color: isSelected
-                      ? YanYanaColors.primary.withOpacity(0.45)
-                      : Colors.transparent,
-                ),
               ),
-              child: ListTile(
-                leading: Icon(
-                  isSelected
-                      ? Icons.check_circle_rounded
-                      : Icons.person_outline_rounded,
-                  color: isSelected
-                      ? YanYanaColors.primary
-                      : YanYanaColors.textMuted,
-                ),
-                title: Text(
-                  contact["name"]!,
-                  style: const TextStyle(
-                    color: YanYanaColors.textDark,
-                    fontWeight: FontWeight.w800,
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.person_add_alt_1_rounded,
+                    color: YanYanaColors.primary,
+                    size: 38,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Henüz güvenilir kişi eklenmedi.",
+                    style: TextStyle(
+                      color: YanYanaColors.textDark,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Safe Call kullanmak için önce güvenilir kişi eklemelisin.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: YanYanaColors.textMuted,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  ElevatedButton.icon(
+                    onPressed: _goToTrustedContacts,
+                    icon: const Icon(Icons.person_add_rounded),
+                    label: const Text("Güvenilir Kişi Ekle"),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...List.generate(trustedContacts.length, (index) {
+              final contact = trustedContacts[index];
+              final bool isSelected = index == selectedIndex;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: YanYanaColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: YanYanaShadows.card,
+                  border: Border.all(
+                    color: isSelected
+                        ? YanYanaColors.primary.withOpacity(0.45)
+                        : Colors.transparent,
                   ),
                 ),
-                subtitle: Text(
-                  contact["number"]!,
-                  style: const TextStyle(
-                    color: YanYanaColors.textMuted,
+                child: ListTile(
+                  leading: Icon(
+                    isSelected
+                        ? Icons.check_circle_rounded
+                        : Icons.person_outline_rounded,
+                    color: isSelected
+                        ? YanYanaColors.primary
+                        : YanYanaColors.textMuted,
                   ),
+                  title: Text(
+                    contact.name,
+                    style: const TextStyle(
+                      color: YanYanaColors.textDark,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  subtitle: Text(
+                    "${contact.relationship} · ${contact.phoneNumber}",
+                    style: const TextStyle(
+                      color: YanYanaColors.textMuted,
+                    ),
+                  ),
+                  onTap: () => selectContact(index),
                 ),
-                onTap: () {
-                  selectContact(
-                    contact["name"]!,
-                    contact["number"]!,
-                  );
-                },
-              ),
-            );
-          }),
+              );
+            }),
 
           const SizedBox(height: 16),
 
@@ -224,7 +364,7 @@ class _SafeCallPageState extends State<SafeCallPage> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  "Prototype demo: Gerçek telefon araması yerine güvenli iletişim akışı simüle edilmektedir.",
+                  "Safe Call, güvenilir kişiye hızlı ulaşmayı sağlayan erişilebilir destek akışıdır.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: YanYanaColors.textMuted,
@@ -238,32 +378,33 @@ class _SafeCallPageState extends State<SafeCallPage> {
 
           const SizedBox(height: 16),
 
-          Container(
-            decoration: BoxDecoration(
-              color: YanYanaColors.surface,
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: YanYanaShadows.card,
-            ),
-            child: ListTile(
-              leading: const Icon(
-                Icons.verified_user_rounded,
-                color: YanYanaColors.primary,
+          if (selectedContact != null)
+            Container(
+              decoration: BoxDecoration(
+                color: YanYanaColors.surface,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: YanYanaShadows.card,
               ),
-              title: const Text(
-                "Seçilen Acil Kişi",
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  color: YanYanaColors.textDark,
+              child: ListTile(
+                leading: const Icon(
+                  Icons.verified_user_rounded,
+                  color: YanYanaColors.primary,
+                ),
+                title: const Text(
+                  "Seçilen Güvenilir Kişi",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: YanYanaColors.textDark,
+                  ),
+                ),
+                subtitle: Text(
+                  "${selectedContact.name} - ${selectedContact.phoneNumber}",
+                  style: const TextStyle(
+                    color: YanYanaColors.textMuted,
+                  ),
                 ),
               ),
-              subtitle: Text(
-                "$selectedContact - $selectedNumber",
-                style: const TextStyle(
-                  color: YanYanaColors.textMuted,
-                ),
-              ),
             ),
-          ),
 
           const SizedBox(height: 30),
 

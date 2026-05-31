@@ -37,7 +37,7 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(this.context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceFirst('Bad state: ', '')),
         ),
@@ -156,7 +156,7 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
 
                     if (!mounted) return;
 
-                    ScaffoldMessenger.of(this.context).showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
                           'SOS isteği ${selectedContact.name} için başarıyla oluşturuldu.',
@@ -248,7 +248,7 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
 
                     if (!mounted) return;
 
-                    ScaffoldMessenger.of(this.context).showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
                           '${selectedContact.name} için güvenli arama başlatıldı.',
@@ -284,7 +284,7 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(this.context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             'Hızlı destek talebi oluşturuldu. Gönüllü: ${updated.assignedVolunteerName ?? '-'}',
@@ -376,6 +376,95 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
               const SizedBox(height: 14),
 
               _sectionCard(
+                title: 'Güvenli Arama Listesi',
+                icon: Icons.contacts_rounded,
+                color: YanYanaColors.primary,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'SOS ve Güvenli Arama için kullanılacak güvenilir kişileri buradan yönetebilirsin.',
+                      style: TextStyle(
+                        color: YanYanaColors.textMuted,
+                        fontSize: 13,
+                        height: 1.35,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: YanYanaColors.primary.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: YanYanaColors.primary.withOpacity(0.12),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: YanYanaColors.primary.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(
+                              Icons.verified_user_rounded,
+                              color: YanYanaColors.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Güvenilir Kişiler',
+                                  style: TextStyle(
+                                    color: YanYanaColors.textDark,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14.5,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Eklediğin kişiler SOS ve Safe Call sisteminde kullanılacaktır.',
+                                  style: TextStyle(
+                                    color: YanYanaColors.textMuted,
+                                    fontSize: 12.5,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _goToTrustedContacts,
+                        icon: const Icon(Icons.manage_accounts_rounded),
+                        label: const Text(
+                          'Kişileri Yönet',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              _sectionCard(
                 title: 'Erişilebilirlik Özellikleri',
                 icon: Icons.accessibility_new_rounded,
                 color: YanYanaColors.secondary,
@@ -384,14 +473,16 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
                     _FeatureTile(
                       icon: Icons.menu_book_rounded,
                       title: 'Sesli Betimlemeli Okuma',
-                      desc: 'Görsel veya belge içeriğini metne dönüştürüp sesli okur.',
+                      desc:
+                          'Görsel veya belge içeriğini metne dönüştürüp sesli okur.',
                       badge: 'MVP',
                     ),
                     Divider(height: 18, color: YanYanaColors.divider),
                     _FeatureTile(
                       icon: Icons.mic_rounded,
                       title: 'Sesli Komut Sistemi',
-                      desc: 'Kullanıcı komutlarını algılayan sesli kontrol sistemi.',
+                      desc:
+                          'Kullanıcı komutlarını algılayan sesli kontrol sistemi.',
                       badge: 'MVP',
                     ),
                     Divider(height: 18, color: YanYanaColors.divider),
@@ -411,9 +502,10 @@ class _AccessibilityPageState extends State<AccessibilityPage> {
                     Divider(height: 18, color: YanYanaColors.divider),
                     _FeatureTile(
                       icon: Icons.notifications_active_rounded,
-                    title: 'Push Notification Sistemi',
-desc: 'Local notification ve uygulama içi bildirim desteği sağlar.',
-badge: 'MVP',
+                      title: 'Push Notification Sistemi',
+                      desc:
+                          'Local notification ve uygulama içi bildirim desteği sağlar.',
+                      badge: 'MVP',
                     ),
                   ],
                 ),
