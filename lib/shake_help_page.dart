@@ -243,7 +243,7 @@ class _ShakeHelpPageState extends State<ShakeHelpPage> {
                   border: Border.all(color: YanYanaColors.divider),
                 ),
                 child: const Text(
-                  "Gerçek sallama algılama özelliği fiziksel mobil cihazlarda test edilmelidir.",
+                  "Shake Detection özelliği aktif edildiğinde telefon sallanarak hızlı yardım bildirimi tetiklenebilir.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: YanYanaColors.textMuted,
