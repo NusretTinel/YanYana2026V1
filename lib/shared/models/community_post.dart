@@ -6,6 +6,8 @@ class CommunityPost {
   final String title;
   final String body;
   final DateTime createdAt;
+  /// `daily_quote` or `community_post` when stored in Firestore.
+  final String? postType;
 
   const CommunityPost({
     required this.id,
@@ -14,6 +16,7 @@ class CommunityPost {
     required this.title,
     required this.body,
     required this.createdAt,
+    this.postType,
   });
 
   /// Alias used in service/API specs.

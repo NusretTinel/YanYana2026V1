@@ -35,11 +35,36 @@ class CommunityPostService {
     }
   }
 
+  Future<void> deletePost({
+    required String postId,
+    required String userId,
+  }) async {
+    final ref = _posts.doc(postId);
+    try {
+      final snap = await ref.get();
+      if (!snap.exists) {
+        throw Exception('Gönderi bulunamadı.');
+      }
+      final data = snap.data()!;
+      final authorId = data['authorId'] as String? ??
+          data['userId'] as String? ??
+          '';
+      if (authorId != userId) {
+        throw Exception('Bu paylaşımı silme yetkiniz yok.');
+      }
+      await ref.delete();
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception(firebaseAuthErrorMessage(e));
+    }
+  }
+
   Future<void> addPost({
     required String authorId,
     required String authorName,
     required String title,
     required String body,
+    String postType = 'community_post',
   }) async {
     final ref = _posts.doc();
     try {
@@ -49,9 +74,39 @@ class CommunityPostService {
         'authorName': authorName.trim(),
         'title': title.trim(),
         'body': body.trim(),
+        'postType': postType,
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
+      throw Exception(firebaseAuthErrorMessage(e));
+    }
+  }
+
+  Future<void> updatePost({
+    required String postId,
+    required String userId,
+    required String title,
+    required String body,
+    required String postType,
+  }) async {
+    final ref = _posts.doc(postId);
+    try {
+      final snap = await ref.get();
+      if (!snap.exists) throw Exception('Gönderi bulunamadı.');
+      final data = snap.data()!;
+      final authorId = data['authorId'] as String? ??
+          data['userId'] as String? ??
+          '';
+      if (authorId != userId) {
+        throw Exception('Bu paylaşımı düzenleme yetkiniz yok.');
+      }
+      await ref.update({
+        'title': title.trim(),
+        'body': body.trim(),
+        'postType': postType,
+      });
+    } catch (e) {
+      if (e is Exception) rethrow;
       throw Exception(firebaseAuthErrorMessage(e));
     }
   }
@@ -67,6 +122,7 @@ class CommunityPostService {
       title: data['title'] as String? ?? '',
       body: (body != null && body.isNotEmpty) ? body : (content ?? ''),
       createdAt: parseFirestoreDate(data['createdAt']),
+      postType: data['postType'] as String?,
     );
   }
 }
